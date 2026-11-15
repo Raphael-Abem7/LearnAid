@@ -1,2 +1,2 @@
 # LearnAid
-LearnAid is a web application powered by local Large Language models from Ollama. These AI models provide responses based on the GES-approved learning materials and, for that matter, is most helpful in guiding Senior High Schools with their studies.
+LearnAid is a web application powered by local Large Language models from Ollama. These AI models provide responses based on the GES-approved learning materials and, for that matter, is most helpful in guiding Senior High Schools with their studies. It is most suited for regular conversations and provides information with regards to the learning materials from which its results are derived, aiding students in their studies based on the nationally accepted curriculum. 
