@@ -1,0 +1,90 @@
+const promptBox = document.getElementById("question");
+const sendButton = document.getElementById("send-btn");
+const chatBody = document.getElementById("chat");
+const subjectNow = document.getElementById("subject");
+const title = document.getElementById("title");
+const subtitle = document.getElementById("subtitle");
+
+function newMessage(sender, message){
+    const chatBubble = document.createElement("div");
+    chatBubble.classList.add("message");
+    chatBubble.classList.add(sender + "_message");
+    chatBubble.textContent = message;
+    chatBody.scrollTop = chatBody.scrollHeight;
+    chatBody.appendChild(chatBubble);
+    return chatBubble;
+}
+
+subjectNow.addEventListener("change", () =>{
+    chatBody.replaceChildren();
+})
+sendButton.addEventListener("click", async () => {
+    const prompt = promptBox.value.trim();
+    if (prompt === "") return;
+
+    newMessage("user", prompt);
+    promptBox.value = "";
+    sendButton.disabled = true;
+    title.textContent = "";
+    subtitle.textContent = "";
+
+    const thinkBubble = newMessage("aid", "Thinking... Give me a moment.");
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: prompt, subject: subjectNow.value })
+        });
+
+        console.log("HTTP status:", response.status);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // FIX 1: DECLARE fullText HERE, before the loop
+        let fullText = "";
+        let firstChunk = true;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            if (!chunk) continue;
+
+            // FIX 2: Clear placeholder BEFORE rendering, not after
+            if (firstChunk) {
+                thinkBubble.textContent = "";
+                firstChunk = false;
+            }
+
+            fullText += chunk;
+
+            // FIX 3: Always render with innerHTML + marked, never textContent
+            thinkBubble.innerHTML = DOMPurify.sanitize(marked.parse(fullText));
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        const remainingText = decoder.decode();
+        if (remainingText) {
+            if (firstChunk) {
+                thinkBubble.textContent = "";
+            }
+            fullText += remainingText;
+            // FIX 3 again: use innerHTML here too
+            thinkBubble.innerHTML = DOMPurify.sanitize(marked.parse(fullText));
+        }
+
+    } catch (error) {
+        // FIX 4: Show the REAL error, not error.detail
+        console.error("CHAT ERROR:", error);
+        thinkBubble.textContent = "Error: " + error.message;
+    } finally {
+        sendButton.disabled = false;
+    }
+});
+
+promptBox.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") sendButton.click();
+});
